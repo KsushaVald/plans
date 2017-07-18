@@ -9,6 +9,7 @@
 #include <sys/msg.h>
 #include <pthread.h>
 #include <time.h>
+#include <fcntl.h>
 
 struct descriptors{
 	int  fd_request;
@@ -22,8 +23,7 @@ struct msg{
 };
 
 void func_time(struct descriptors *des)
-{
-	struct msg mes; long int s_time; struct tm *m_time;
+{	struct msg mes; long int s_time; struct tm *m_time;
 
 	while(1){
         	msgrcv(des->fd_request,&mes, sizeof(mes),1L,0);
@@ -46,13 +46,14 @@ int main()
 	pthread_t tid;
 
 	id=ftok("server.c",'k');
-	des.fd_request=(id, IPC_CREAT|0666);
-	id=ftok("server.c",'s');
-	des.fd_answer=(id,IPC_CREAT|0666);
+	des.fd_request=msgget(id, IPC_CREAT|0666);
+	id=ftok("client.c",'s');
+	des.fd_answer=msgget(id,IPC_CREAT|0666);
  	my_addr.sin_family=AF_INET;
         my_addr.sin_port=htons(15242);
         my_addr.sin_addr.s_addr=htonl(INADDR_ANY);
 	fd_socket=socket(AF_INET, SOCK_DGRAM,0);
+	fcntl(fd_socket,test,O_NONBLOCK);
 	bind(fd_socket,(struct sockaddr*)&my_addr,sizeof(my_addr));
 	pthread_create(&tid,NULL,(void*)&func_time,(void*)&des);
 
@@ -61,11 +62,11 @@ int main()
 			perror("recvfrom");
 			exit(-1);
 		}
-		mes.type=1;
+		mes.type=1L;
 		mes.len=len;
 		msgsnd(des.fd_request, &mes,sizeof(mes), 0);
-		test=msgrcv(des.fd_answer,&mes, sizeof(mes),2L,IPC_NOWAIT);
-		if(test==-1){
+		test=msgrcv(des.fd_answer,&mes, sizeof(mes),2L,0);
+		if(test<0){
 			err=errno;
 			if(err==ENOMSG){
 				continue;
@@ -74,7 +75,7 @@ int main()
 			return 1;
 		}
 		strcpy(buf,mes.time);
- 		sendto(fd_socket, buf, 20,0,(struct sockaddr*)&mes.client,mes.len);
+ 		sendto(fd_socket, buf, 256,0,(struct sockaddr*)&mes.client,mes.len);
 	}
 }
 
