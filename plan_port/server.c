@@ -20,7 +20,9 @@ void new_port(int *port){
         my_addr.sin_port=htons(*port);
         my_addr.sin_addr.s_addr=htonl(INADDR_ANY);
         fd_socket=socket(AF_INET,SOCK_STREAM,0);
-        bind(fd_socket,(struct sockaddr*)&my_addr,sizeof(my_addr));
+        if(bind(fd_socket,(struct sockaddr*)&my_addr,sizeof(my_addr))==-1){
+		perror("bind");
+	}
         listen(fd_socket,5);
 
 	fd_client=accept(fd_socket,(struct sockaddr*)&client,&len);

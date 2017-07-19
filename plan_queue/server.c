@@ -59,12 +59,17 @@ int main()
 
 	while(1){
 		if(recvfrom(fd_socket,buf,256,0,(struct sockaddr*)&mes.client,&len)==-1){
-			perror("recvfrom");
-			exit(-1);
+			err=errno;
+			if(err!=EWOULDBLOCK){
+				perror("recvfrom");
+				exit(-1);
+			}
 		}
-		mes.type=1L;
-		mes.len=len;
-		msgsnd(des.fd_request, &mes,sizeof(mes), 0);
+		else{
+			mes.type=1L;
+			mes.len=len;
+			msgsnd(des.fd_request, &mes,sizeof(mes), 0);
+		}
 		test=msgrcv(des.fd_answer,&mes, sizeof(mes),2L,0);
 		if(test<0){
 			err=errno;
